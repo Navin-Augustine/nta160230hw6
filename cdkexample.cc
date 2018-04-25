@@ -1,22 +1,15 @@
-/*
- * Usage of CDK Matrix
- *
- * File:   example1.cc
- * Author: Stephen Perkins
- * Email:  stephen.perkins@utdallas.edu
- */
+// Navin Augustine nta160230@utdallas.edu CS3377.501
 
 #include <iostream>
 #include "cdk.h"
-
-
+#include <fstream>
+#include <stdint.h>
 #define MATRIX_WIDTH 3
 #define MATRIX_HEIGHT 5
 #define BOX_WIDTH 15
-#define MATRIX_NAME_STRING "Test Matrix"
+#define MATRIX_NAME_STRING "Binary File Contents"
 
 using namespace std;
-
 
 int main()
 {
@@ -33,49 +26,77 @@ int main()
   // values you choose to set for MATRIX_WIDTH and MATRIX_HEIGHT
   // above.
 
+  
+
   const char 		*rowTitles[] = {"0 " ,"a", "b", "c", "d", "e"};
   const char 		*columnTitles[] = {"0","a", "b", "c"};
   int		boxWidths[] = {BOX_WIDTH, BOX_WIDTH, BOX_WIDTH, BOX_WIDTH, BOX_WIDTH, BOX_WIDTH};
   int		boxTypes[] = {vMIXED, vMIXED, vMIXED, vMIXED,  vMIXED,  vMIXED};
 
-  /*
-   * Initialize the Cdk screen.
-   *
-   * Make sure the putty terminal is large enough
-   */
+  class BinaryFileHeader
+  {
+  public:
+
+    uint32_t magicNumber;
+    uint32_t versionNumber;
+    uint64_t numRecords;
+  };
+
+  const int maxRecordStringLength = 25;
+  
+  class BinaryFileRecord
+  {
+  public:
+
+    uint8_t strLength;
+    char   stringBuffer[maxRecordStringLength];
+    };
+
+  //Initialize the Cdk screen.
   window = initscr();
   cdkscreen = initCDKScreen(window);
 
-  /* Start CDK Colors */
+  // Start CDK Colors
   initCDKColor();
 
-  /*
-   * Create the matrix.  Need to manually cast (const char**) to (char **)
-  */
-  myMatrix = newCDKMatrix(cdkscreen, CENTER, CENTER, MATRIX_HEIGHT, MATRIX_WIDTH, MATRIX_HEIGHT, MATRIX_WIDTH,
+  //Create the matrix
+   myMatrix = newCDKMatrix(cdkscreen, CENTER, CENTER, MATRIX_HEIGHT, MATRIX_WIDTH, MATRIX_HEIGHT, MATRIX_WIDTH,
 			  MATRIX_NAME_STRING, (char **) rowTitles, (char **) columnTitles, boxWidths,
 				     boxTypes, 1, 1, ' ', ROW, true, true, false);
 
-  if (myMatrix ==NULL)
+if (myMatrix == NULL)
     {
       printf("Error creating Matrix\n");
       _exit(1);
     }
 
-  /* Display the Matrix */
+  //Display Matrix
   drawCDKMatrix(myMatrix, true);
 
-  /*
-   * Dipslay a message
-   */
-  setCDKMatrixCell(myMatrix, 1, 1, "Hello World");
-  setCDKMatrixCell(myMatrix, 2, 2, "Test Message");
-  drawCDKMatrix(myMatrix, true);    /* required  */
+  BinaryFileHeader *myInfo = new BinaryFileHeader();
 
-  /* So we can see results, pause until a key is pressed. */
+  ifstream binInfile("cs3377.bin", ios::in | ios::binary);
+  binInfile.read((char *) myInfo, sizeof(BinaryFileHeader));
+  // Display information
+  setCDKMatrixCell(myMatrix, 1, 1, myInfo->magicNumber);
+  setCDKMatrixCell(myMatrix, 1, 2, myInfo->versionNumber);
+  setCDKMatrixCell(myMatrix, 1, 3, myInfo->numRecords);
+  int counter = 2;
+  while(!binInfile.eof())
+  {
+    BinaryFileRecord *myRecord = new BinaryFileRecord();
+    binInfile.read((char *) myRecord, sizeof(BinaryFileRecord));
+    setCDKMatrixCell(myMatrix, counter, 1, myInfo->strLength);
+    setCDKMatrixCell(myMatrix, counter, 2, myInfo->stringBuffer);
+    counter++;
+  }
+  drawCDKMatrix(myMatrix, true);
+
+  binInfile.close();
+
+  /* So we can see results*/
   unsigned char x;
   cin >> x;
-
   // Cleanup screen
   endCDK();
 }
